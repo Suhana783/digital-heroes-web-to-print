@@ -1,109 +1,208 @@
-# Digital Heroes — Web-to-Print Platform
+# Digital Heroes Web-to-Print Platform
 
-Digital Heroes is a web-to-print MVP for six custom print and fabrication divisions: labels and stickers, race and event numbers, MTB boards, stamps, trophies, and laser-cut work. It includes server-priced product configuration, Supabase customer accounts and orders, private artwork, a template-based browser designer, CSV variable-data PDFs, proof approval, an admin production workflow, operational reports, and a local mock payment sandbox with optional Razorpay TEST mode. See the [PRD compliance review](docs/prd-compliance-review.md) for scope and remaining limitations; this project is not represented as production-ready.
+Digital Heroes is a web-to-print MVP for six print and fabrication divisions: labels and stickers, race and event numbers, MTB boards, stamps, trophies, and laser-cut work. The application connects product configuration and server-side pricing to customer orders, artwork, saved designs, proofs, production tracking, reporting, and a local payment sandbox.
+
+The repository contains an implementation of the main MVP workflows. It is **not verified as production-ready**: remote database migration state, deployed-provider configuration, and complete end-to-end behavior still need owner review. See [the PRD compliance review](docs/prd-compliance-review.md) and [final testing and deployment notes](docs/final-testing-and-deployment.md) for scope and limitations.
+
+## Project information
+
+- **Purpose:** Let customers configure print products, place and track orders, provide artwork, and review proofs; give administrators tools to manage products, templates, orders, proofs, and production stages.
+- **Divisions:** Labels and stickers, race and event numbers, MTB boards, stamps, trophies, and laser-cut work.
+- **Application:** A React/Vite browser client and a separate Node.js/Express API, backed by Supabase PostgreSQL, Auth, and private Storage.
+- **Status:** Web-to-print MVP. Some database migrations still require reconciliation with the target Supabase project, and deployment and end-to-end behavior have not been fully verified.
+
+## What is included
+
+- **Catalogue and pricing:** Six divisions, configurable products and options, and price calculations performed by the Express API using catalogue data.
+- **Customer accounts and orders:** Supabase Auth, customer profiles, checkout, order history, ownership checks, and reorder with server-side repricing.
+- **Saved designs and artwork:** A browser editor for template-based text and image designs, private customer artwork uploads, and order-item design references. The saved-design/order-item association needs migration `20261125000700_link_saved_designs_to_order_items.sql` applied before it can be used in the target database.
+- **CSV variable data:** CSV preview and field mapping, batch history, and basic per-row PDF output stored in private Supabase Storage.
+- **Proofs and production:** Versioned proofs, customer approval or change requests, admin proof review, production-file eligibility checks, and order production stages.
+- **Admin and reports:** Protected product/template management, order and production views, and operational reports.
+- **Payments:** A local mock payment sandbox and optional Razorpay TEST-mode integration. Mock payments are rejected in production mode. Razorpay live payments are not enabled.
+
+These workflows have limitations: generated PDFs are MVP output rather than professional prepress files; saved designs are not automatically converted into order artwork; tax/VAT and transactional email are not implemented; and automated tests do not cover live Supabase or browser workflows.
 
 ## Technology
 
-- **Client:** React, Vite, JavaScript (ES modules), Tailwind CSS, React Router DOM
-- **API:** Node.js, Express, dotenv, cors, Nodemon
-- **Database connection:** Supabase PostgreSQL using `@supabase/supabase-js`
-- **Deployment targets:** Vercel (client), Render (API), Supabase (database and private Storage); free-tier availability and limits vary by provider and account.
+| Area | Stack |
+| --- | --- |
+| Frontend | React, Vite, JavaScript ES modules, Tailwind CSS, React Router |
+| Backend | Node.js, Express, JavaScript ES modules |
+| Database and identity | Supabase PostgreSQL and Supabase Auth |
+| File storage | Private Supabase Storage buckets |
+| Payments | Local mock sandbox; optional Razorpay TEST mode |
 
-## Repository structure
+## Repository layout
 
 ```text
-client/                 Vite React application
-  public/
-  src/
-    assets/ components/ layouts/ pages/ features/
-    hooks/ context/ services/ routes/ utils/ constants/ styles/
+client/                 React/Vite application
+  src/                  pages, components, routes, state, services, styles
 server/                 Express API
-  src/
-    config/ controllers/ routes/ middleware/ services/
-    utils/ constants/ validators/
-docs/
-  architecture.md
-README.md
-.gitignore
+  src/                  routes, controllers, middleware, services, validators
+supabase/
+  migrations/           timestamped database changes
+  seed.sql              initial product catalogue seed
+docs/                   architecture, feature and operational documentation
 ```
 
-Foundation files are added as their responsibilities begin; future feature folders do not contain placeholder modules.
+The client and server are separate npm applications. Install and run their dependencies from their respective directories; there is no root-level npm package.
 
-## Prerequisites
+## Requirements
 
-Use Node.js 20 or newer and npm. Install dependencies separately in each application; there are no root-level npm dependencies.
+- Node.js 20 or newer
+- npm
+- A Supabase project for database, authentication, and storage-backed workflows
 
-## Frontend setup
+## Local development
+
+### 1. Configure the client
 
 ```bash
 cd client
 npm install
+```
+
+Create `client/.env` using `client/.env.example` as a reference:
+
+```env
+VITE_API_URL=http://localhost:5000/api
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+Start the Vite development server:
+
+```bash
 npm run dev
 ```
 
-Vite prints the local URL (normally `http://localhost:5173`). `npm run build` creates the production bundle and `npm run preview` serves that bundle locally. Tailwind CSS is integrated through its Vite plugin.
+The default local URL is usually `http://localhost:5173`. Create or preview a production bundle with `npm run build` and `npm run preview`.
 
-## Backend setup
+### 2. Configure the API
+
+In another terminal:
 
 ```bash
 cd server
 npm install
+```
+
+Create `server/.env` using `server/.env.example` as a reference. Set the Supabase project URL, anon key, and **server-only** service-role key. A local development configuration can include:
+
+```env
+PORT=5000
+NODE_ENV=development
+CLIENT_URL=http://localhost:5173
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_server_only_service_role_key
+PRICE_CURRENCY=INR
+PAYMENT_MODE=mock
+MOCK_PAYMENT_SECRET=your_local_mock_secret
+```
+
+The mock secret is optional in the application configuration; set one for local use when using the mock flow. Do not use a service-role key in the client or in any `VITE_` variable.
+
+Start the API:
+
+```bash
 npm run dev
 ```
 
-The API listens on port 5000 by default. `npm start` starts it without Nodemon. Set `CLIENT_URL` to the exact frontend origin; a comma-separated list is accepted when more than one origin is needed. Run the server's existing Node.js built-in test suite with `npm test` from `server/`. It is not a Jest suite, and there is no client test script.
+Use `npm start` to run without Nodemon. The API defaults to port `5000` and the client to Vite's default port `5173`.
 
-## Environment configuration
+### Optional Razorpay TEST mode
 
-The client reads `VITE_API_URL` from `client/.env` (default: `http://localhost:5000/api`). Supabase Auth also needs `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`; these publishable values are safe in the browser. Never place a service role key in a `VITE_` variable.
+Razorpay is optional. To use it locally, select `PAYMENT_MODE=razorpay` and configure test credentials only in `server/.env`:
 
-The server reads `PORT`, `NODE_ENV`, `CLIENT_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, optional `PRICE_CURRENCY` (default `INR`), and `SUPABASE_SERVICE_ROLE_KEY` for authorized server-side operations from `server/.env`. Payment configuration uses `PAYMENT_MODE=mock` for local development or `PAYMENT_MODE=razorpay` with backend-only `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` test credentials. `MOCK_PAYMENT_SECRET` is optional for local mock mode. Catalogue and customer-scoped reads use the anon key and customer JWT so RLS applies. Keep every secret server-only; configure local ignored `.env` files directly and never commit them. Placeholders are documented in the existing `.env.example` files.
+```env
+RAZORPAY_KEY_ID=rzp_test_your_key_id
+RAZORPAY_KEY_SECRET=your_test_key_secret
+```
+
+The key secret stays on the server. The application does not enable live Razorpay payments. Read [payment integration](docs/payment-integration.md) before configuring this mode.
+
+## Environment variables
+
+The repository's `.env.example` files are the source of the current variable names. Keep real values in ignored local environment files or deployment-provider secret settings.
+
+| Application | Variables |
+| --- | --- |
+| Client | `VITE_API_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` |
+| Server | `PORT`, `CLIENT_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `PRICE_CURRENCY`, `PAYMENT_MODE`, `MOCK_PAYMENT_SECRET`, optional `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` |
+
+Never commit `.env` files, put server secrets in `VITE_` variables, or expose the Supabase service-role key to browser code.
+
+## Supabase database setup
+
+The local repository contains ordered, timestamped migrations in `supabase/migrations/`. They define the catalogue, customer/order data, artwork, roles, proofs, production workflow, templates/designs, variable-data batches, payments, and design-to-order-item association.
+
+Remote migration history has not been verified in this environment. Before changing a database:
+
+1. Sign in to and link the Supabase CLI to the intended project.
+2. Inspect remote migration history and compare it to the local migration files.
+3. Review the pending migration plan and apply only migrations confirmed missing, in timestamp order.
+4. Never reset a populated database or rerun an already-applied migration.
+
+The saved-design/order-item association is in `20261125000700_link_saved_designs_to_order_items.sql`. It is additive and has not been applied automatically. Design-linked checkout depends on that migration. The project seed file is for initial catalogue data; do not run it blindly against an existing catalogue. See [database schema](docs/database-schema.md), [saved-design linking](docs/saved-design-order-linking.md), and [final testing and deployment](docs/final-testing-and-deployment.md).
 
 ## API health check
 
-With the API running, visit `http://localhost:5000/api/health` or run:
+With the API running, open `http://localhost:5000/api/health` or run:
 
 ```bash
 curl http://localhost:5000/api/health
 ```
 
-The route responds with HTTP 200 and JSON indicating that the API process is running. It does not claim that a database connection has been tested.
+This indicates that the API process responds. It does not verify the database connection, Supabase Storage, or other dependencies.
 
-## Product pricing
+## Tests and build
 
-The product page lets visitors configure options and request a server-calculated estimate through `POST /api/pricing/calculate`. The server retrieves current prices from Supabase, validates selected options, and returns exact decimal strings. Calculation rules, examples, and schema limits are documented in [docs/pricing-rules.md](docs/pricing-rules.md).
+Run the server's existing Node.js built-in test suite:
 
-## Customer accounts
+```bash
+cd server
+npm test
+```
 
-Supabase Auth powers registration and login. Protected customer pages call Express with the customer's access token; the API verifies it and applies customer ownership/RLS checks. Admin routes use the same verified Auth identity plus a database-backed role. Review remote migration history and the migration guidance in [docs/final-testing-and-deployment.md](docs/final-testing-and-deployment.md) before applying anything. Setup details are in [customer accounts](docs/customer-accounts.md), [checkout and orders](docs/checkout-orders.md), [artwork uploads](docs/artwork-uploads.md), [admin roles](docs/admin-roles.md), and [payment integration](docs/payment-integration.md).
+Build the frontend:
 
-## Supabase setup
+```bash
+cd client
+npm run build
+```
 
-1. Create or select the Supabase project and configure its Project URL, anon/publishable key, and service-role key only in the appropriate ignored local/server environment files.
-2. Apply `supabase/seed.sql` only when setting up a fresh catalogue, after reviewing the schema. For an existing project, inspect migration history first and apply only missing timestamped migrations in order.
-3. Use `supabase migration list --remote` to inspect history and `supabase db push --dry-run` to preview pending changes after CLI login/linking. Review the plan; do not reset production or rerun applied migrations. The service role key must never be exposed to the browser.
+There is no configured client test script, and the server suite uses Node's test runner rather than Jest. Passing these checks does not verify live Supabase policies, payment-provider behavior, or the complete browser journey. Current results and coverage limits are documented in [final testing and deployment](docs/final-testing-and-deployment.md).
 
-## Deployment preparation
+## Deploy the client to Vercel
 
-### Vercel client
+This section deploys the **React/Vite client**. The Express API is a separate service and must be deployed to a Node.js host that can serve the `/api` endpoints. Supabase remains the database, authentication, and storage provider. Do not put backend credentials in Vercel client environment variables.
 
-Import the repository into Vercel and set the project root to `client`. Use `npm run build` as the build command and `dist` as the output directory. Configure `VITE_API_URL` to the deployed API's `/api` base URL. Vite's SPA fallback should serve `index.html` for client-side routes.
+1. Push the repository to a Git provider and import it as a new Vercel project.
+2. Set the Vercel **Root Directory** to `client`.
+3. Use the Vite framework preset. The project uses `npm run build` and produces static assets in `dist`; verify these settings in Vercel if they are not detected automatically.
+4. Add these **client** environment variables for the Vercel Production environment (and Preview if needed):
 
-### Render API
+   ```env
+   VITE_API_URL=https://your-api-host.example/api
+   VITE_SUPABASE_URL=https://your-project.supabase.co
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
 
-Create a Node web service from the repository with root directory `server`, build command `npm install`, and start command `npm start`. Configure `PORT` through Render's assigned port (the app honors `process.env.PORT`) and add `CLIENT_URL`, `NODE_ENV`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` in the Render environment settings. Use a Render plan available to your account; availability and limits can change. Update Vercel's `VITE_API_URL` after the Render URL is assigned.
+   Replace the API URL with the deployed Express API URL. Only the Supabase anon/publishable key belongs in the browser. Never add `SUPABASE_SERVICE_ROLE_KEY`, `RAZORPAY_KEY_SECRET`, or other backend secrets to this Vercel client project.
 
-Deployment requires real environment variables and migration reconciliation. Mock mode is disabled when `NODE_ENV=production`; use no payment mode until the payment configuration and payment database migrations are verified. Razorpay live mode is not implemented. Do not deploy using example credentials or treat successful builds as production readiness.
+5. Add `client/vercel.json` so React Router paths resolve to the SPA entry page on direct navigation and refresh:
 
-## Security notes
+   ```json
+   {
+     "$schema": "https://openapi.vercel.sh/vercel.json",
+     "rewrites": [
+       { "source": "/(.*)", "destination": "/index.html" }
+     ]
+   }
+   ```
 
-- Public catalogue queries use the Supabase anon key and rely on RLS. Do not use the elevated service role key for these requests.
-- Never commit `.env` files or paste secrets into source control.
-- The API health route is independent of Supabase and must not be interpreted as a database health check.
-- CORS is restricted to `CLIENT_URL` origins configured on the server.
+6. Deploy, then configure the Supabase Auth site/redirect URLs and the API's `CLIENT_URL` with the resulting Vercel origin. Confirm CORS, login redirects, direct loading of customer/admin routes, and API requests in a staging environment.
 
-## Development roadmap
-
-1–13. Project foundation through catalogue, checkout, accounts, artwork, admin roles, proof/production workflow, designer/templates, variable-data merge, reports, and payment sandbox.
-14. Final integration and PRD review.
-15. Final testing and deployment preparation; runtime, database, and provider-dependent checks remain subject to the status documented in [the final review](docs/final-testing-and-deployment.md).
+The Vercel deployment does not deploy the Express API or apply Supabase migrations. Reconcile database migration history before release; do not assume migrations in this local repository have been applied remotely. See the [official Vite on Vercel guide](https://vercel.com/docs/frameworks/frontend/vite) for current Vercel build and SPA routing details.
