@@ -13,9 +13,10 @@ import variableDataRoutes from './routes/variableDataRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 
 const app = express();
-const allowedOrigins = (process.env.CLIENT_URL || 'http://localhost:5173')
-  .split(',')
-  .map((origin) => origin.trim());
+const allowedOrigins = [...new Set([
+  'http://localhost:5173',
+  ...(process.env.CLIENT_URL || '').split(',').map((origin) => origin.trim()),
+].filter(Boolean))];
 
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
