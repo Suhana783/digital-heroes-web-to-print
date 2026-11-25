@@ -1,0 +1,26 @@
+{
+  "name": "digital-heroes-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "node src/services/pricingCalculator.test.js && node src/validators/accountValidators.test.js && node src/validators/orderValidators.test.js && node src/middleware/requireAuth.test.js && node src/middleware/requireAdmin.test.js && node src/validators/artworkValidators.test.js && node src/middleware/parseArtworkForm.test.js && node src/services/artworkService.test.js && node src/middleware/parseProofForm.test.js && node src/validators/proofValidators.test.js && node src/services/proofService.test.js && node src/validators/paymentValidators.test.js && node src/services/paymentService.test.js && node src/services/adminProductionService.test.js && node src/services/orderService.test.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "pdf-lib": "^1.17.1",
+    "razorpay": "^2.9.8",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  },
+  "overrides": {
+    "minimatch": "^11.0.1"
+  }
+}
