@@ -13,12 +13,17 @@ import variableDataRoutes from './routes/variableDataRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
 
 const app = express();
-const allowedOrigins = [...new Set([
-  'http://localhost:5173',
+const isProduction = process.env.NODE_ENV === 'production';
+const allowedOrigins = new Set([
+  ...(!isProduction ? ['http://localhost:5173'] : []),
   ...(process.env.CLIENT_URL || '').split(',').map((origin) => origin.trim()),
-].filter(Boolean))];
+].filter(Boolean));
 
-app.use(cors({ origin: allowedOrigins }));
+app.use(cors({ origin: (origin, callback) => {
+  const isLocalDevelopmentOrigin = !isProduction
+    && /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin || '');
+  callback(null, !origin || allowedOrigins.has(origin) || isLocalDevelopmentOrigin);
+} }));
 app.use(express.json());
 app.use('/api/health', healthRoutes);
 app.use('/api/catalogue', catalogueRoutes);

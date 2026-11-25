@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 import { signInCustomer } from '../../services/accountApi.js';
 
 const showDemoAdmin = import.meta.env.VITE_SHOW_DEMO_ADMIN === 'true';
-const demoAdminEmail = (import.meta.env.VITE_DEMO_ADMIN_EMAIL || '').trim();
+const demoAdminEmail = showDemoAdmin ? (import.meta.env.VITE_DEMO_ADMIN_EMAIL || 'admin@gmail.com').trim() : '';
 const demoAdminPassword = import.meta.env.VITE_DEMO_ADMIN_PASSWORD || '';
 
 export default function Login() {
@@ -34,21 +34,19 @@ export default function Login() {
 
   return <AuthFormLayout title="Welcome back" introduction="Sign in to see your account and order history.">
     {!supabaseConfigured && <FormMessage>Supabase Auth is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in client/.env.</FormMessage>}
-    {showDemoAdmin && <aside className="auth-demo-helper" aria-label="Admin demo sign-in">
-      <strong>Reviewer admin demo</strong>
-      <p>Use only a dedicated demo account connected to isolated sample data. These VITE_ credentials are public in the deployed frontend.</p>
-      {demoAdminEmail && demoAdminPassword ? <>
-        <p><span>Email</span> <code>{demoAdminEmail}</code></p>
-        <p><span>Password</span> <code>{demoAdminPassword}</code></p>
-        <button className="text-link" type="button" onClick={fillDemoCredentials}>Fill demo sign-in</button>
-      </> : <p>Demo credentials are not configured for this deployment.</p>}
-    </aside>}
     <form className="auth-form" onSubmit={submit}>
       <label>Email<input type="email" autoComplete="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} required /></label>
       <label>Password<input type="password" autoComplete="current-password" value={form.password} onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))} required /></label>
       {error && <FormMessage>{error}</FormMessage>}
       <button className="calculate-button" disabled={busy || !supabaseConfigured}>{busy ? 'Signing in…' : 'Sign in'} <span>↗</span></button>
     </form>
+    {showDemoAdmin && <>
+      <button className="auth-demo-helper" type="button" onClick={fillDemoCredentials} disabled={!demoAdminPassword}>
+        <strong>Demo Credentials for Admin</strong>
+        <small>{demoAdminEmail}</small>
+      </button>
+      {!demoAdminPassword && <p className="auth-demo-note">Set VITE_DEMO_ADMIN_PASSWORD to enable the demo sign-in button.</p>}
+    </>}
     <p className="auth-switch">New to Digital Heroes? <Link to="/register">Create an account</Link></p>
   </AuthFormLayout>;
 }

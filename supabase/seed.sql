@@ -1,4 +1,7 @@
 -- Idempotent sample catalogue. Safe to run again after the migration.
+-- This seed intentionally does not create Auth users or promote roles.
+-- Create/confirm the demo user through Supabase Auth, then run
+-- scripts/promote-confirmed-user-to-admin.sql as the project owner.
 insert into public.product_divisions (name, slug, description, sort_order) values
   ('Labels & Stickers', 'labels-stickers', 'Custom labels and stickers for products, events, and everyday use.', 1),
   ('Race & Event Numbers', 'race-event-numbers', 'Numbers and markings for races and organized events.', 2),
