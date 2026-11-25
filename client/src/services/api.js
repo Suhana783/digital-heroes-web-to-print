@@ -1,10 +1,16 @@
-const apiBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/$/, '');
+const configuredApiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
+const apiBaseUrl = configuredApiUrl.endsWith('/api') ? configuredApiUrl : `${configuredApiUrl}/api`;
+
+function normalizeApiPath(path) {
+  const pathWithLeadingSlash = path.startsWith('/') ? path : `/${path}`;
+  return pathWithLeadingSlash.startsWith('/api/') ? pathWithLeadingSlash.slice(4) : pathWithLeadingSlash;
+}
 
 export async function apiRequest(path, { signal, method = 'GET', body, accessToken } = {}) {
   const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
   let response;
   try {
-    response = await fetch(`${apiBaseUrl}${path}`, {
+    response = await fetch(`${apiBaseUrl}${normalizeApiPath(path)}`, {
       signal,
       method,
       headers: {
