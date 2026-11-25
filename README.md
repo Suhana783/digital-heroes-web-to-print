@@ -63,10 +63,10 @@ cd client
 npm install
 ```
 
-Create `client/.env` using `client/.env.example` as a reference:
+Create the git-ignored `client/.env` and set the client configuration:
 
 ```env
-VITE_API_URL=http://localhost:5000/api
+VITE_API_URL=http://localhost:5000
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
@@ -125,14 +125,24 @@ The key secret stays on the server. The application does not enable live Razorpa
 
 ## Environment variables
 
-The repository's `.env.example` files are the source of the current variable names. Keep real values in ignored local environment files or deployment-provider secret settings.
+Use `server/.env.example` as the backend variable-name reference. Client variables are listed below; keep local values in ignored `.env` files and deployment values in provider settings.
 
 | Application | Variables |
 | --- | --- |
-| Client | `VITE_API_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` |
+| Client | `VITE_API_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`; optional demo-only `VITE_SHOW_DEMO_ADMIN`, `VITE_DEMO_ADMIN_EMAIL`, `VITE_DEMO_ADMIN_PASSWORD` |
 | Server | `PORT`, `CLIENT_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `PRICE_CURRENCY`, `PAYMENT_MODE`, `MOCK_PAYMENT_SECRET`, optional `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` |
 
-Never commit `.env` files, put server secrets in `VITE_` variables, or expose the Supabase service-role key to browser code.
+Never commit `.env` files, put server secrets in `VITE_` variables, or expose the Supabase service-role key to browser code. Demo admin credentials supplied through `VITE_` variables are public in the browser bundle; only use them with an isolated demo project and disposable sample data.
+
+For a reviewer-only demo deployment, set these client variables:
+
+```env
+VITE_SHOW_DEMO_ADMIN=true
+VITE_DEMO_ADMIN_EMAIL=demo-admin@example.test
+VITE_DEMO_ADMIN_PASSWORD=replace-with-disposable-demo-password
+```
+
+The login helper only displays and prefills this dedicated account; it does not create or promote it. See [admin roles](docs/admin-roles.md) and the [manual promotion SQL](supabase/scripts/promote-confirmed-user-to-admin.sql). Do not enable this helper for production or reuse a real admin password.
 
 ## Supabase database setup
 
@@ -145,7 +155,7 @@ Remote migration history has not been verified in this environment. Before chang
 3. Review the pending migration plan and apply only migrations confirmed missing, in timestamp order.
 4. Never reset a populated database or rerun an already-applied migration.
 
-The saved-design/order-item association is in `20261125000700_link_saved_designs_to_order_items.sql`. It is additive and has not been applied automatically. Design-linked checkout depends on that migration. The project seed file is for initial catalogue data; do not run it blindly against an existing catalogue. See [database schema](docs/database-schema.md), [saved-design linking](docs/saved-design-order-linking.md), and [final testing and deployment](docs/final-testing-and-deployment.md).
+The saved-design/order-item association is in `20261125000700_link_saved_designs_to_order_items.sql`. It is additive and has not been applied automatically. Design-linked checkout depends on that migration. The project seed file is for initial catalogue data; do not run it blindly against an existing catalogue. New accounts receive the `customer` role; project owners can promote a confirmed account with [`supabase/scripts/promote-confirmed-user-to-admin.sql`](supabase/scripts/promote-confirmed-user-to-admin.sql). See [admin roles](docs/admin-roles.md), [database schema](docs/database-schema.md), [saved-design linking](docs/saved-design-order-linking.md), and [final testing and deployment](docs/final-testing-and-deployment.md).
 
 ## API health check
 
@@ -185,18 +195,17 @@ This section deploys the **React/Vite client**. The Express API is a separate se
 4. Add these **client** environment variables for the Vercel Production environment (and Preview if needed):
 
    ```env
-   VITE_API_URL=https://your-api-host.example/api
+   VITE_API_URL=https://your-api-host.example
    VITE_SUPABASE_URL=https://your-project.supabase.co
    VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
    ```
 
    Replace the API URL with the deployed Express API URL. Only the Supabase anon/publishable key belongs in the browser. Never add `SUPABASE_SERVICE_ROLE_KEY`, `RAZORPAY_KEY_SECRET`, or other backend secrets to this Vercel client project.
 
-5. Add `client/vercel.json` so React Router paths resolve to the SPA entry page on direct navigation and refresh:
+5. `client/vercel.json` routes React Router paths to the SPA entry page on direct navigation and refresh:
 
    ```json
    {
-     "$schema": "https://openapi.vercel.sh/vercel.json",
      "rewrites": [
        { "source": "/(.*)", "destination": "/index.html" }
      ]
